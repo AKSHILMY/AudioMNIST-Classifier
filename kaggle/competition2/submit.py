@@ -98,6 +98,9 @@ from sklearn.decomposition import PCA
 # In[10]:
 
 
+from sklearn.model_selection import GridSearchCV
+
+
 def select_k_best_using_ANOVA_F(x_train,y_train,x_valid,k=100):
   selector = SelectKBest(f_classif,k = k)
   x_train_now = selector.fit_transform(x_train,y_train)
@@ -111,16 +114,30 @@ def PCA_transform(x_train,x_valid,n_components=0.95,svd_solver="full"):
   x_valid_trf = pd.DataFrame(pca.transform(x_valid))
   return x_train_trf,x_valid_trf,pca
 
-def get_accuracy(x_train,y_train,x_valid,y_valid,classifier="svc",params={"kernel" : "linear","average": "weighted","class_weight": None}):
-  if classifier=="svc":
-    classifier = svm.SVC(kernel=params['kernel'],class_weight = params["class_weight"])
-    classifier.fit(x_train,y_train)
-  y_pred = classifier.predict(x_valid)
-  conf_matrix = metrics.confusion_matrix(y_valid,y_pred)
-  accuracy = metrics.accuracy_score(y_valid,y_pred)
-  precision = metrics.precision_score(y_valid,y_pred,average=params["average"])
-  recall = metrics.recall_score(y_valid,y_pred,average=params["average"])
-  return conf_matrix,accuracy,precision,recall
+def get_accuracy(x_train, y_train, x_valid, y_valid, classifier="svc", params={"kernel": "linear", "average": "weighted", "class_weight": None}, hyperparams={}):
+    if classifier == "svc":
+        hyperparameter_grid = {
+            "C": hyperparams.get("C", [1.0]),
+            "kernel": hyperparams.get("kernel", ["linear", "poly", "rbf", "sigmoid"]),
+            "class_weight": hyperparams.get("class_weight", [None, "balanced"]),
+        }
+
+        classifier = svm.SVC()
+
+        grid_search = GridSearchCV(classifier, hyperparameter_grid, cv=5, scoring='accuracy')
+        grid_search.fit(x_train, y_train)
+
+        classifier = grid_search.best_estimator_
+
+        classifier.fit(x_train, y_train)
+
+    y_pred = classifier.predict(x_valid)
+    conf_matrix = metrics.confusion_matrix(y_valid, y_pred)
+    accuracy = metrics.accuracy_score(y_valid, y_pred)
+    precision = metrics.precision_score(y_valid, y_pred, average=params["average"])
+    recall = metrics.recall_score(y_valid, y_pred, average=params["average"])
+    return conf_matrix, accuracy, precision, recall
+
 
 
 # ## Label 01 : Model Training, Validation & Testing
@@ -142,7 +159,7 @@ conf_matrix_before,accuracy_before,precision_before,recall_before = get_accuracy
 )
 
 
-# In[12]:
+# In[ ]:
 
 
 print(f"Accuracy: {accuracy_before}")
@@ -150,7 +167,7 @@ print(f"Precision: {precision_before}")
 print(f"Recall: {recall_before}")
 
 
-# In[13]:
+# In[ ]:
 
 
 num_of_features_expected = 768
@@ -182,13 +199,13 @@ conf_matrix,accuracy,precision,recall = get_accuracy(
 )
 
 
-# In[14]:
+# In[ ]:
 
 
 print(f"Number of features : {x_train_trf.columns}") 
 
 
-# In[15]:
+# In[ ]:
 
 
 print(f"Accuracy: {accuracy}")
@@ -196,7 +213,7 @@ print(f"Precision: {precision}")
 print(f"Recall: {recall}")
 
 
-# In[16]:
+# In[ ]:
 
 
 TEST_DF = pd.read_csv("dataset/test.csv")
@@ -204,13 +221,13 @@ IDS = TEST_DF[TEST_DF.columns[0]]
 features_df = TEST_DF[TEST_DF.columns[1:]]
 
 
-# In[17]:
+# In[ ]:
 
 
 scaled_features_df = pd.DataFrame(scaler.fit_transform(features_df),columns=FEATURES)
 
 
-# In[18]:
+# In[ ]:
 
 
 k = 768
@@ -229,26 +246,26 @@ classifier.fit(x_train_trf,y_train_dict[LABEL_1])
 labels_after = classifier.predict(scaled_features_df_now)
 
 
-# In[19]:
+# In[ ]:
 
 
 assert len(features_df) == len(labels_after)
 
 
-# In[20]:
+# In[ ]:
 
 
 submission = pd.DataFrame()
 submission = pd.concat([submission,IDS],axis=1)
 
 
-# In[21]:
+# In[ ]:
 
 
 submission = pd.concat([submission,pd.DataFrame(labels_after,columns=['label_1'])],ignore_index=False,axis=1)
 
 
-# In[22]:
+# In[ ]:
 
 
 submission
@@ -256,7 +273,7 @@ submission
 
 # ## Label 02 : Model Training, Validation & Testing
 
-# In[23]:
+# In[ ]:
 
 
 conf_matrix_before,accuracy_before,precision_before,recall_before = get_accuracy(
@@ -273,7 +290,7 @@ conf_matrix_before,accuracy_before,precision_before,recall_before = get_accuracy
 )
 
 
-# In[24]:
+# In[ ]:
 
 
 print(f"Accuracy: {accuracy_before}")
@@ -281,7 +298,7 @@ print(f"Precision: {precision_before}")
 print(f"Recall: {recall_before}")
 
 
-# In[25]:
+# In[ ]:
 
 
 num_of_features_expected = 768
@@ -313,13 +330,13 @@ conf_matrix,accuracy,precision,recall = get_accuracy(
 )
 
 
-# In[26]:
+# In[ ]:
 
 
 print(f"Number of features : {x_train_trf.columns}") 
 
 
-# In[27]:
+# In[ ]:
 
 
 print(f"Accuracy: {accuracy}")
@@ -327,7 +344,7 @@ print(f"Precision: {precision}")
 print(f"Recall: {recall}")
 
 
-# In[28]:
+# In[ ]:
 
 
 k = 768
@@ -346,19 +363,19 @@ classifier.fit(x_train_trf,y_train_dict[LABEL_2])
 labels_after = classifier.predict(scaled_features_df_now)
 
 
-# In[29]:
+# In[ ]:
 
 
 assert len(features_df) == len(labels_after)
 
 
-# In[30]:
+# In[ ]:
 
 
 submission = pd.concat([submission,pd.DataFrame(labels_after,columns=['label_2'])],ignore_index=False,axis=1)
 
 
-# In[31]:
+# In[ ]:
 
 
 submission
@@ -366,7 +383,7 @@ submission
 
 # ## Label 03 : Model Training, Validation & Testing
 
-# In[32]:
+# In[ ]:
 
 
 conf_matrix_before,accuracy_before,precision_before,recall_before = get_accuracy(
@@ -383,7 +400,7 @@ conf_matrix_before,accuracy_before,precision_before,recall_before = get_accuracy
 )
 
 
-# In[33]:
+# In[ ]:
 
 
 print(f"Accuracy: {accuracy_before}")
@@ -391,7 +408,7 @@ print(f"Precision: {precision_before}")
 print(f"Recall: {recall_before}")
 
 
-# In[34]:
+# In[ ]:
 
 
 num_of_features_expected = 768
@@ -423,13 +440,13 @@ conf_matrix,accuracy,precision,recall = get_accuracy(
 )
 
 
-# In[35]:
+# In[ ]:
 
 
 print(f"Number of features : {x_train_trf.columns}") 
 
 
-# In[36]:
+# In[ ]:
 
 
 print(f"Accuracy: {accuracy}")
@@ -437,7 +454,7 @@ print(f"Precision: {precision}")
 print(f"Recall: {recall}")
 
 
-# In[37]:
+# In[ ]:
 
 
 k = 768
@@ -456,19 +473,19 @@ classifier.fit(x_train_trf,y_train_dict[LABEL_3])
 labels_after = classifier.predict(scaled_features_df_now)
 
 
-# In[38]:
+# In[ ]:
 
 
 assert len(features_df) == len(labels_after)
 
 
-# In[39]:
+# In[ ]:
 
 
 submission = pd.concat([submission,pd.DataFrame(labels_after,columns=['label_3'])],ignore_index=False,axis=1)
 
 
-# In[40]:
+# In[ ]:
 
 
 submission
@@ -476,7 +493,7 @@ submission
 
 # ## Label 04 : Model Training, Validation & Testing
 
-# In[41]:
+# In[ ]:
 
 
 conf_matrix_before,accuracy_before,precision_before,recall_before = get_accuracy(
@@ -493,7 +510,7 @@ conf_matrix_before,accuracy_before,precision_before,recall_before = get_accuracy
 )
 
 
-# In[42]:
+# In[ ]:
 
 
 print(f"Accuracy: {accuracy_before}")
@@ -501,7 +518,7 @@ print(f"Precision: {precision_before}")
 print(f"Recall: {recall_before}")
 
 
-# In[43]:
+# In[ ]:
 
 
 num_of_features_expected = 768
@@ -533,13 +550,13 @@ conf_matrix,accuracy,precision,recall = get_accuracy(
 )
 
 
-# In[44]:
+# In[ ]:
 
 
 print(f"Number of features : {x_train_trf.columns}") 
 
 
-# In[45]:
+# In[ ]:
 
 
 print(f"Accuracy: {accuracy}")
@@ -547,7 +564,7 @@ print(f"Precision: {precision}")
 print(f"Recall: {recall}")
 
 
-# In[46]:
+# In[ ]:
 
 
 k = 768
@@ -566,19 +583,19 @@ classifier.fit(x_train_trf,y_train_dict[LABEL_4])
 labels_after = classifier.predict(scaled_features_df_now)
 
 
-# In[47]:
+# In[ ]:
 
 
 assert len(features_df) == len(labels_after)
 
 
-# In[48]:
+# In[ ]:
 
 
 submission = pd.concat([submission,pd.DataFrame(labels_after,columns=['label_4'])],ignore_index=False,axis=1)
 
 
-# In[49]:
+# In[ ]:
 
 
 submission
@@ -586,7 +603,7 @@ submission
 
 # ## Submission
 
-# In[50]:
+# In[ ]:
 
 
 submission.to_csv("./submission.csv",index_label=False,index=False)
